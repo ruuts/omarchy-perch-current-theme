@@ -1,0 +1,24 @@
+# Track the portable theme baseline, not this machine's working-session files.
+*
+!.gitignore
+!README.md
+!ARTWORK.md
+!preview.png
+!palette.json
+!theme_utils.py
+!build-theme.py
+!validate-theme.py
+!install.py
+!perch-menu.qml
+!theme/
+!theme/**
+theme/backgrounds/01-perch-current-5k.png
+!assets/
+assets/*
+!assets/perch-current-source.png
+!tests/
+!tests/**
+!tools/
+!tools/**
+**/__pycache__/
+**/*.pyc
