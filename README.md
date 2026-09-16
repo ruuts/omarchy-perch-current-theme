@@ -34,13 +34,14 @@ omarchy theme install https://github.com/ruuts/omarchy-perch-current-theme
 ```
 
 This applies the colors, wallpaper, shell overlays, btop, and Helix from the
-repository root. Omarchy intentionally regenerates executable theme files from
-`colors.toml` for Git-installed themes.
+repository root. Omarchy intentionally discards executable theme files from
+Git-installed themes, so this path cannot apply Perch Current's rounded
+Hyprland borders/blur or install its fish menu icon.
 
 For the complete experience, including the custom Neovim, terminal, OpenCode,
-and Perch cursor behavior, clone or copy this repository to a machine with
-Python 3.11 or newer, open an **unlocked desktop terminal**, then run from the
-repository directory:
+Perch cursor behavior, rounded Hyprland borders/blur, and fish menu icon,
+clone or copy this repository to a machine with Python 3.11 or newer, open an
+**unlocked desktop terminal**, then run from the repository directory:
 
 ```bash
 python3 install.py --activate
