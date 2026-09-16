@@ -1,0 +1,23 @@
+#!/bin/bash
+# Omarchy's shared OSC resolver uses bright foreground for cursors. Perch
+# Current intentionally uses its chartreuse accent, including existing panes.
+
+[[ $1 == "perch-current" ]] || exit 0
+
+cursor=$(omarchy-theme-color accent)
+osc="\033]12;${cursor}\007"
+
+if tmux list-sessions >/dev/null 2>&1; then
+  tmux set-option -g cursor-colour "$cursor" 2>/dev/null || true
+  while IFS= read -r tty; do
+    [[ $tty == /dev/pts/* ]] && printf '%b' "$osc" >"$tty" 2>/dev/null || true
+  done < <(tmux list-panes -a -F '#{pane_tty}' 2>/dev/null | sort -u)
+fi
+
+# Foot reloads live colors through OSC rather than its config file.
+for foot_pid in $(pgrep -x foot 2>/dev/null); do
+  for child_pid in $(pgrep -P "$foot_pid" 2>/dev/null); do
+    tty=$(readlink "/proc/$child_pid/fd/1" 2>/dev/null)
+    [[ $tty == /dev/pts/* ]] && printf '%b' "$osc" >"$tty" 2>/dev/null || true
+  done
+done

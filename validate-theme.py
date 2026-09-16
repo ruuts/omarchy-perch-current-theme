@@ -37,6 +37,15 @@ with tempfile.TemporaryDirectory(prefix='perch-theme-check-') as directory:
     assert shell['popups']['background-alpha'] == .94
     assert shell['popups']['border-width'] == 2
     assert shell['menu']['border'] == '#AEBF70'
+    assert 'theme[div_line]="#40584C"' in (current / 'btop.theme').read_text()
+    assert 'theme[cpu_box]="#52715D"' in (current / 'btop.theme').read_text()
+    helix = (current / 'helix.toml').read_text()
+    assert 'cursor = "#D3E880"' in helix
+    assert '"ui.virtual.indent-guide" = "#40584C"' in helix
+    vscode = json.loads((current / 'vscode-theme.json').read_text())
+    assert vscode['name'] == 'Perch Current'
+    assert vscode['colors']['editorCursor.foreground'] == '#D3E880'
+    assert vscode['colors']['tree.indentGuidesStroke'] == '#40584C'
     with Image.open(current / 'backgrounds/00-perch-current-ai-5k.png') as image:
         assert image.size == (5120, 2880)
     theme = json.loads((current / 'opencode.json').read_text())['theme']
@@ -72,5 +81,19 @@ vim.cmd("qa!")
 ''')
     nvim_env = dict(env, PERCH_AETHER_PATH=str(HOME / '.local/share/nvim/lazy/aether'), PERCH_NVIM_THEME=str(current / 'neovim.lua'))
     subprocess.run(['nvim', '--headless', '-u', 'NONE', '-l', str(lua)], env=nvim_env, check=True, timeout=20)
+    # Git-installed themes are intentionally restricted. Stage the repository
+    # itself, rather than the unrestricted theme/ payload, to verify the
+    # native `omarchy theme install <repo-url>` layout.
+    native_source = isolated / 'native-source'
+    shutil.copytree(ROOT, native_source, ignore=shutil.ignore_patterns('.git', '__pycache__'))
+    (native_source / '.git').mkdir()
+    shutil.rmtree(target)
+    shutil.copytree(native_source, target)
+    subprocess.run(['omarchy', 'theme', 'set', 'perch-current'], env=env, check=True, timeout=40)
+    native_current = isolated / '.local/state/omarchy/current/theme'
+    assert (native_current / 'backgrounds/00-perch-current-ai-5k.png').is_file()
+    assert tomllib.loads((native_current / 'colors.toml').read_text())['accent'] == '#D3E880'
+    assert 'theme[div_line]="#40584C"' in (native_current / 'btop.theme').read_text()
+    assert tomllib.loads((native_current / 'shell.toml').read_text())['menu']['border'] == '#AEBF70'
     shutil.copy2(current / 'shell.toml', ROOT / 'validated-shell.toml')
-    print(f'Validated {len(list(current.iterdir()))} staged theme entries, terminal templates, shell overlays, 50 OpenCode roles, 5K export, and real Neovim highlights.')
+    print(f'Validated {len(list(current.iterdir()))} staged theme entries, native Git installation, quiet btop/Helix/VS Code details, terminal templates, shell overlays, 50 OpenCode roles, 5K export, and real Neovim highlights.')

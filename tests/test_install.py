@@ -25,6 +25,8 @@ class InstallerTests(unittest.TestCase):
         (self.repo / 'theme/backgrounds').mkdir(parents=True)
         shutil.copy2(ROOT / 'install.py', self.repo / 'install.py')
         shutil.copy2(ROOT / 'perch-menu.qml', self.repo / 'perch-menu.qml')
+        (self.repo / 'hooks/theme-set.d').mkdir(parents=True)
+        shutil.copy2(ROOT / 'hooks/theme-set.d/perch-current-cursor', self.repo / 'hooks/theme-set.d/perch-current-cursor')
         for name, value in {
             'colors.toml': 'background = "#273D36"\n',
             'neovim.lua': 'return {}\n',
@@ -98,6 +100,9 @@ elif sys.argv[1:4]==['plugin','clone','omarchy.menu']:
         self.assertIn('perch-current', transparency.read_text())
         widget = self.home / '.config/omarchy/plugins/riverfriend.menu/BarWidget.qml'
         self.assertIn('perch-current.enabled', widget.read_text())
+        hook = self.home / '.config/omarchy/hooks/theme-set.d/perch-current-cursor'
+        self.assertTrue(hook.exists())
+        self.assertTrue(os.access(hook, os.X_OK))
 
     def test_reinstall_backs_up_local_changes(self):
         self.invoke()

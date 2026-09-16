@@ -146,6 +146,9 @@ def main(argv=None):
         backup.save(tui_path)
         backup.save(state / 'omarchy/current/theme.name')
         backup.save(state / 'omarchy/current/background')
+        cursor_hook = config / 'omarchy/hooks/theme-set.d/perch-current-cursor'
+        backup.write(cursor_hook, (ROOT / 'hooks/theme-set.d/perch-current-cursor').read_text())
+        cursor_hook.chmod(0o755)
         run('omarchy', 'theme', 'set', SLUG, timeout=120)
         tui.setdefault('$schema', 'https://opencode.ai/tui.json')
         tui['theme'] = SLUG

@@ -6,6 +6,8 @@
   "panel": "#354E43",
   "fg": "#EFEAD8",
   "muted": "#B2C5B4",
+  "structure": "#40584C",
+  "structure_active": "#52715D",
   "accent": "#D3E880",
   "green": "#B9DB93",
   "blue": "#A0DCCE",

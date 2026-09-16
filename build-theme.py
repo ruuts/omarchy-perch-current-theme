@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import os
 import re
+import shutil
 import tomllib
 from PIL import Image, ImageOps
 
@@ -11,6 +12,13 @@ from theme_utils import fish, luminance
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'theme'
 DEFAULTS = Path(os.environ.get('OMARCHY_PATH', '/usr/share/omarchy')) / 'default/themed'
+NATIVE_THEME_FILES = [
+    'btop.theme', 'colors.toml', 'helix.toml', 'icons.theme',
+    'shell.bar.toml', 'shell.controls.toml', 'shell.launcher.toml',
+    'shell.lock.toml', 'shell.menu.toml', 'shell.notifications.toml',
+    'shell.perch-current.toml', 'shell.popups.toml', 'shell.tooltip.toml',
+    'backgrounds/00-perch-current-ai-5k.png',
+]
 
 
 def main():
@@ -22,13 +30,14 @@ def main():
         mode='dark', accent=p['accent'], background=p['bg'], dark_background=p['inset'],
         darker_background='#1C2E28', lighter_background=p['panel'],
         foreground=p['fg'], dark_foreground=p['muted'], light_foreground='#F3EFDF',
-        bright_foreground='#F7F2E2', muted=p['muted'],
+        bright_foreground='#F7F2E2', muted=p['muted'], structure=p['structure'], structure_active=p['structure_active'],
         selection=p['panel'], selection_background=p['panel'], selection_foreground=p['fg'],
         red=p['red'], yellow=p['yellow'], orange=p['yellow'], green=p['green'],
         cyan=p['cyan'], blue=p['blue'], magenta=p['purple'], purple=p['purple'], brown='#D3B992',
         bright_red='#FFC0AC', bright_yellow='#F6DEA5', bright_green='#CCE9AA',
         bright_cyan='#AFEACE', bright_blue='#B9E9DF', bright_magenta='#E0CFE8',
         hyprland_active_border=focus_border, hyprland_inactive_border='#52715D',
+        theme_type='dark',
     )
     (OUT / 'colors.toml').write_text('# Perch Current — Quiet accents\n' + ''.join(f'{key} = "{value}"\n' for key, value in colors.items()))
     tomllib.loads((OUT / 'colors.toml').read_text())
@@ -40,11 +49,14 @@ def main():
             assert ratio >= 4.5, checks[-1]
     (ROOT / 'theme-contrast-report.txt').write_text('\n'.join(checks) + '\n')
 
+    def render_template(name):
+        content = (DEFAULTS / (name + '.tpl')).read_text()
+        return re.sub(r'\{\{ (\w+) \}\}', lambda m: colors[m[1][:-6]].lstrip('#') if m[1].endswith('_strip') else colors[m[1]], content)
+
     # Theme-specific terminal files retain Omarchy's template mappings and use
     # the approved chartreuse cursor rather than the template's bone default.
     for name in ['alacritty.toml', 'foot.ini', 'ghostty.conf', 'kitty.conf']:
-        content = (DEFAULTS / (name + '.tpl')).read_text()
-        content = re.sub(r'\{\{ (\w+) \}\}', lambda m: colors[m[1][:-6]].lstrip('#') if m[1].endswith('_strip') else colors[m[1]], content)
+        content = render_template(name)
         if name == 'ghostty.conf':
             content = content.replace(f'cursor-color = {colors["bright_foreground"]}', f'cursor-color = {p["accent"]}')
             content += '\nbackground-opacity = 0.92\n'
@@ -59,6 +71,75 @@ def main():
             content = content.replace(f'cursor={p["bg"][1:]} {colors["bright_foreground"][1:]}', f'cursor={p["bg"][1:]} {p["accent"][1:]}')
             content += '\n# Apply translucency to default-color cells, including Neovim Normal.\nalpha=0.92\nalpha-mode=matching\n'
         (OUT / name).write_text(content)
+
+    # Omarchy's default templates reuse muted text for structural UI. These
+    # color-only outputs retain readable comments while quieting guides, rules,
+    # and btop's box treatment.
+    btop = render_template('btop.theme')
+    for key in ['cpu_box', 'mem_box', 'net_box', 'proc_box']:
+        btop = re.sub(rf'^(theme\[{key}\]=).*$', rf'\g<1>"{p["structure_active"]}"', btop, flags=re.M)
+    btop = re.sub(r'^(theme\[div_line\]=).*$', rf'\g<1>"{p["structure"]}"', btop, flags=re.M)
+    btop = btop.replace(f'theme[gradient_color_3]="{p["muted"]}"', f'theme[gradient_color_3]="{p["structure"]}"')
+    btop = btop.replace(f'theme[gradient_color_4]="{p["muted"]}"', f'theme[gradient_color_4]="{p["structure_active"]}"')
+    (OUT / 'btop.theme').write_text(btop)
+
+    helix = render_template('helix.toml')
+    helix_lines = {
+        '"ui.linenr"': f'"ui.linenr" = {{ fg = "{p["structure"]}" }}',
+        '"ui.window"': f'"ui.window" = {{ fg = "{p["structure_active"]}" }}',
+        '"ui.bufferline"': f'"ui.bufferline" = {{ fg = "{p["structure"]}", bg = "background" }}',
+        '"ui.virtual"': f'"ui.virtual" = "{p["structure"]}"',
+        '"ui.virtual.indent-guide"': f'"ui.virtual.indent-guide" = "{p["structure"]}"',
+        '"ui.virtual.inlay-hint"': f'"ui.virtual.inlay-hint" = {{ fg = "{p["structure_active"]}" }}',
+        '"ui.virtual.whitespace"': f'"ui.virtual.whitespace" = "{p["structure"]}"',
+        '"ui.statusline"': '"ui.statusline" = { fg = "foreground", bg = "dark_background" }',
+        '"ui.statusline.inactive"': f'"ui.statusline.inactive" = {{ fg = "{p["muted"]}", bg = "dark_background" }}',
+        '"ui.statusline.normal"': '"ui.statusline.normal" = { fg = "background", bg = "accent", modifiers = ["bold"] }',
+        '"ui.statusline.insert"': '"ui.statusline.insert" = { fg = "background", bg = "color2", modifiers = ["bold"] }',
+        '"ui.statusline.select"': '"ui.statusline.select" = { fg = "background", bg = "color5", modifiers = ["bold"] }',
+        '"ui.menu.selected"': '"ui.menu.selected" = { fg = "accent", bg = "lighter_background", modifiers = ["bold"] }',
+        '"ui.cursor"': '"ui.cursor" = { fg = "background", bg = "cursor" }',
+        '"ui.cursor.primary"': '"ui.cursor.primary" = { fg = "background", bg = "cursor" }',
+        '"ui.cursor.primary.normal"': '"ui.cursor.primary.normal" = { fg = "background", bg = "cursor" }',
+        '"ui.cursor.primary.insert"': '"ui.cursor.primary.insert" = { fg = "background", bg = "cursor" }',
+        '"ui.cursor.primary.select"': '"ui.cursor.primary.select" = { fg = "background", bg = "cursor" }',
+    }
+    for prefix, replacement in helix_lines.items():
+        helix = re.sub(rf'^{re.escape(prefix)}.*$', replacement, helix, flags=re.M)
+    helix = helix.replace(
+        '# Statusline uses an inverted band (background-color text on foreground-color\n'
+        '# background) to guarantee contrast across both light and dark Omarchy themes.',
+        '# Keep the statusline grounded; small mode labels carry color instead of an\n'
+        '# inverted foreground band.',
+    )
+    helix = helix.replace(f'cursor = "{colors["bright_foreground"]}"', f'cursor = "{p["accent"]}"')
+    (OUT / 'helix.toml').write_text(helix)
+
+    vscode = json.loads(render_template('vscode-theme.json'))
+    vscode['name'] = 'Perch Current'
+    ui = vscode['colors']
+    subtle = p['structure']
+    structural = p['structure_active']
+    for key in ['tree.indentGuidesStroke', 'editorWhitespace.foreground', 'editorRuler.foreground']:
+        ui[key] = subtle
+    for key in ['tree.inactiveIndentGuidesStroke']:
+        ui[key] = subtle + '60'
+    for key in [f'editorIndentGuide.background{i}' for i in range(1, 7)]:
+        ui[key] = subtle + '70'
+    for key in [f'editorIndentGuide.activeBackground{i}' for i in range(1, 7)]:
+        ui[key] = structural
+    for key in ['tree.tableColumnsBorder', 'checkbox.border', 'dropdown.border', 'input.border', 'editorWidget.border', 'editorSuggestWidget.border', 'editorHoverWidget.border', 'menu.border', 'notificationCenter.border', 'notificationToast.border', 'notifications.border', 'pickerGroup.border', 'panelInput.border', 'commandCenter.border']:
+        ui[key] = structural
+    for key in ['sideBarSectionHeader.border', 'editorGroup.border', 'panel.border', 'panelSection.border', 'panelSectionHeader.border', 'terminal.border']:
+        ui[key] = structural + '80'
+    ui.update({
+        'button.background': p['panel'], 'button.foreground': p['accent'], 'button.hoverBackground': structural,
+        'button.secondaryBackground': p['panel'], 'button.secondaryHoverBackground': structural,
+        'checkbox.selectBackground': p['panel'], 'checkbox.selectBorder': p['accent'],
+        'editorCursor.foreground': p['accent'], 'terminalCursor.foreground': p['accent'],
+        'terminalOverviewRuler.cursorForeground': p['accent'],
+    })
+    (OUT / 'vscode-theme.json').write_text(json.dumps(vscode, indent=2) + '\n')
 
     # Theme-scoped geometry; switching themes returns to Omarchy's defaults.
     (OUT / 'hyprland.lua').write_text('''hl.config({
@@ -191,6 +272,12 @@ Codex's existing `tui.theme = "ansi"` follows the terminal palette automatically
 Shell overlays preserve defaults while setting the approved surfaces.
 The user-owned menu clone shows the perch only when this theme's marker is active.
 ''')
+    # `omarchy theme install` clones a repository directly into a theme
+    # directory, so its safe color-only payload must live at repository root.
+    for name in NATIVE_THEME_FILES:
+        destination = ROOT / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(OUT / name, destination)
     print(f'Built {OUT}; {len(checks)} color contrast checks passed.')
 
 
