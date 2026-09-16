@@ -169,7 +169,8 @@ def main():
         'menu': {'background': p['bg'], 'background-alpha': .94, 'text': p['fg'], 'border': focus_border, 'border-alpha': 1.0, 'border-width': 2, 'scrim': p['inset'], 'scrim-alpha': .3,
                  'selected-background': p['panel'], 'selected-background-alpha': 1.0, 'selected-text': p['accent'], 'selected-border': p['accent'], 'selected-border-alpha': .6},
         'lock': {'background': p['bg'], 'background-alpha': 1.0, 'text': p['fg'], 'placeholder': p['muted'], 'text-error': p['red'], 'border': '#52715D', 'border-active': p['accent'], 'border-error': p['red'], 'border-alpha': 1.0, 'selection': p['panel'], 'selection-alpha': 1.0},
-        'perch-current': {'enabled': 1},
+        # Color.pick exposes string-valued shell tokens to QML widgets.
+        'perch-current': {'enabled': '1'},
         'popups': {'background': p['bg'], 'background-alpha': .94, 'text': p['fg'], 'border': focus_border, 'border-alpha': 1.0, 'border-width': 2},
         'notifications': {'background': p['bg'], 'background-alpha': .94, 'text': p['fg'], 'border': focus_border, 'border-alpha': 1.0, 'border-width': 2, 'countdown': p['accent']},
         'tooltip': {'background': p['bg'], 'background-alpha': .94, 'text': p['fg'], 'border': focus_border, 'border-alpha': 1.0, 'border-width': 2},

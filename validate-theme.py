@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='perch-theme-check-') as directory:
         if item.suffix == '.lua':
             subprocess.run(['luajit', '-e', f'assert(loadfile({json.dumps(str(item))}))'], check=True)
     shell = tomllib.loads((current / 'shell.toml').read_text())
-    assert shell['perch-current']['enabled'] == 1
+    assert shell['perch-current']['enabled'] == '1'
     assert shell['bar']['background'] == '#21352E'
     assert shell['launcher']['selected-background'] == '#354E43'
     assert shell['popups']['background-alpha'] == .94
