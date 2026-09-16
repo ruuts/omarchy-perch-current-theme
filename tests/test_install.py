@@ -46,6 +46,7 @@ class InstallerTests(unittest.TestCase):
             'omarchy': '''#!/usr/bin/env python3
 import os,sys,pathlib
 h=pathlib.Path.home()
+with open(os.environ['TEST_OMARCHY_LOG'], 'a') as log: log.write(' '.join(sys.argv[1:])+'\\n')
 if sys.argv[1:3]==['theme','set']:
     p=h/'.local/state/omarchy/current'; p.mkdir(parents=True,exist_ok=True)
     (p/'theme.name').write_text(sys.argv[3]+'\\n')
@@ -58,7 +59,8 @@ elif sys.argv[1:4]==['plugin','clone','omarchy.menu']:
             path = self.bin / command
             path.write_text(source)
             path.chmod(0o755)
-        self.env = dict(os.environ, HOME=str(self.home), USER='riverfriend', PATH=str(self.bin) + os.pathsep + os.environ['PATH'])
+        self.log = self.base / 'omarchy.log'
+        self.env = dict(os.environ, HOME=str(self.home), USER='riverfriend', PATH=str(self.bin) + os.pathsep + os.environ['PATH'], TEST_OMARCHY_LOG=str(self.log))
         for key in ['XDG_CONFIG_HOME', 'XDG_STATE_HOME', 'CODEX_HOME']:
             self.env.pop(key, None)
 
@@ -103,6 +105,7 @@ elif sys.argv[1:4]==['plugin','clone','omarchy.menu']:
         hook = self.home / '.config/omarchy/hooks/theme-set.d/perch-current-cursor'
         self.assertTrue(hook.exists())
         self.assertTrue(os.access(hook, os.X_OK))
+        self.assertIn('restart shell', self.log.read_text())
 
     def test_reinstall_backs_up_local_changes(self):
         self.invoke()

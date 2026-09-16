@@ -175,6 +175,10 @@ end
 
 '''
                 backup.write(transparency, guard + text)
+        if args.perch_menu:
+            # Copying unchanged QML does not reliably trigger the plugin watcher.
+            check_unlocked()
+            run('omarchy', 'restart', 'shell', timeout=30)
         print('Activated Perch Current. Restart OpenCode/Neovim/Codex and open a new Foot window.')
     else:
         print('Installed assets. Run again with --activate from your unlocked Omarchy desktop to apply.')
