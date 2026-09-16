@@ -139,6 +139,10 @@ elif sys.argv[1:4]==['plugin','clone','omarchy.menu']:
         output = installer.codex_ansi(text)
         self.assertFalse(tomllib.loads(output)['tui']['notifications'])
         self.assertEqual(tomllib.loads(output)['tui']['theme'], 'ansi')
+        nested = '[tui.model_availability_nux]\n"gpt-5.6-terra" = 1\n'
+        output = installer.codex_ansi(nested)
+        self.assertEqual(tomllib.loads(output)['tui']['theme'], 'ansi')
+        self.assertEqual(tomllib.loads(output)['tui']['model_availability_nux']['gpt-5.6-terra'], 1)
         with self.assertRaises(ValueError):
             installer.codex_ansi('tui = { theme = "nord" }\n')
 

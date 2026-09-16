@@ -33,6 +33,10 @@ def codex_ansi(text):
         return text
     header = re.search(r'^\[tui\][ \t]*(?:#.*)?$', text, re.M)
     if not header:
+        # A nested table such as [tui.model_availability_nux] creates an
+        # implicit tui parent. TOML permits declaring that parent afterwards.
+        if isinstance(config.get('tui'), dict) and 'theme' not in config['tui']:
+            return text.rstrip() + '\n\n[tui]\ntheme = "ansi"\n'
         if 'tui' in config:
             raise ValueError('Codex uses a nonstandard TUI table. Set tui.theme = "ansi" manually.')
         return text.rstrip() + '\n\n[tui]\ntheme = "ansi"\n'
